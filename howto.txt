@@ -1,0 +1,10 @@
+cd madrid-googlemaps-data
+pnpm install
+
+Create .env file wiht PLACES_API_KEY
+
+Data collection: 
+pnpm dev
+
+UI: 
+pnpm serve

@@ -1,4 +1,4 @@
-module.exports = {
+modules.exports = {
   parser: "@typescript-eslint/parser",
   extends: [
     "eslint:recommended",

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Madrid Leads Viewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #1a1a1a; padding: 24px; }
+  h1 { font-size: 1.5rem; margin-bottom: 16px; }
+  .controls { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; background: #fff; }
+  .count { font-size: 0.85rem; color: #666; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  th { background: #1a1a1a; color: #fff; text-align: left; padding: 10px 14px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 14px; border-bottom: 1px solid #eee; font-size: 0.85rem; }
+  tr:hover td { background: #f9f9f9; }
+  .maps-link { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #4285f4; color: #fff; border-radius: 50%; text-decoration: none; font-size: 0.75rem; }
+  .maps-link:hover { background: #3367d6; }
+  .empty { text-align: center; padding: 48px; color: #999; }
+  .rating { color: #f59e0b; }
+</style>
+</head>
+<body>
+<h1>Madrid Leads</h1>
+<div class="controls">
+  <select id="sector-select"><option value="">Loading sectors...</option></select>
+  <span class="count" id="count"></span>
+</div>
+<table id="leads-table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Address</th>
+      <th>Phone</th>
+      <th>Rating</th>
+      <th>Reviews</th>
+      <th>Area</th>
+      <th>Type</th>
+      <th>Map</th>
+    </tr>
+  </thead>
+  <tbody id="leads-body">
+    <tr><td colspan="8" class="empty">Select a sector to view leads</td></tr>
+  </tbody>
+</table>
+
+<script>
+const sectorSelect = document.getElementById("sector-select");
+const leadsBody = document.getElementById("leads-body");
+const countEl = document.getElementById("count");
+
+async function loadSectors() {
+  const res = await fetch("/api/sectors");
+  const sectors = await res.json();
+  sectorSelect.innerHTML = '<option value="">-- Select sector --</option>';
+  sectors.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = s.replace(/_/g, " ");
+    sectorSelect.appendChild(opt);
+  });
+  if (sectors.length === 1) {
+    sectorSelect.value = sectors[0];
+    loadLeads(sectors[0]);
+  }
+}
+
+async function loadLeads(sector) {
+  if (!sector) {
+    leadsBody.innerHTML = '<tr><td colspan="8" class="empty">Select a sector to view leads</td></tr>';
+    countEl.textContent = "";
+    return;
+  }
+  leadsBody.innerHTML = '<tr><td colspan="8" class="empty">Loading...</td></tr>';
+  const res = await fetch(`/api/leads/${encodeURIComponent(sector)}`);
+  const leads = await res.json();
+  countEl.textContent = `${leads.length} leads`;
+
+  if (leads.length === 0) {
+    leadsBody.innerHTML = '<tr><td colspan="8" class="empty">No leads found</td></tr>';
+    return;
+  }
+
+  leadsBody.innerHTML = leads.map(l => `
+    <tr>
+      <td><strong>${esc(l.name)}</strong></td>
+      <td>${esc(l.address)}</td>
+      <td>${esc(l.phone || "—")}</td>
+      <td class="rating">${l.rating ? "★ " + l.rating : "—"}</td>
+      <td>${l.review_count ?? "—"}</td>
+      <td>${esc(l.area)}</td>
+      <td>${esc(l.primary_type || l.sector || "")}</td>
+      <td>${l.google_maps_url ? `<a class="maps-link" href="${esc(l.google_maps_url)}" target="_blank" rel="noopener">↗</a>` : "—"}</td>
+    </tr>
+  `).join("");
+}
+
+function esc(str) {
+  if (str == null) return "";
+  const d = document.createElement("div");
+  d.textContent = String(str);
+  return d.innerHTML;
+}
+
+sectorSelect.addEventListener("change", e => loadLeads(e.target.value));
+loadSectors();
+</script>
+</body>
+</html>
